@@ -27,8 +27,8 @@ def mask_card_and_account(data):
 def show_recent_operations(data):
     # Фильтруем и сортируем данные по дате (последние операции сверху)
     recent_operations = sorted(
-        [operation for operation in data if operation['state'] == 'EXECUTED'],
-        key=lambda x: x['date'],
+        [operation for operation in data if operation.get('state') == 'EXECUTED'],
+        key=lambda x: x.get('date'),
         reverse=True
     )[:5]
 
