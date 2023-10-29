@@ -5,35 +5,28 @@ from datetime import datetime
 with open('operations.json', 'r', encoding='utf-8') as file:
     data = json.load(file)
 
-
-# Функция для форматирования даты
 def format_date(date_str):
-    date = datetime.fromisoformat(date_str)  # Преобразование формата даты
+    '''Функция для форматирования даты'''
+    date = datetime.fromisoformat(date_str)
     return date.strftime('%d.%m.%Y')
 
 
-# Функция для маскировки номера карты
 def mask_card(card_number):
-    # Разделим номер карты на группы: первые 6 символов, последние 4 символа
-    first_part = card_number[:6]
+    '''Функция для маскировки номера карты'''
     last_part = card_number[-4:]
-
-    # Замаскируем средние символы, если они есть
-    middle_part = ' '.join(['*' * 4] * ((len(card_number) - 10) // 4))
-
-    masked_card = f"{first_part} {middle_part} {last_part}"
+    first_part = card_number[:len(card_number)-12]
+    middle_part = card_number[-12:-10]
+    masked_card = f"{first_part} {middle_part}** **** {last_part}"
     return masked_card
 
-
-# Функция для маскировки номера счета
 def mask_account(account_number):
+    '''Функция для маскировки номера счета'''
     last_part = account_number[-4:]
-    masked_account = f"**{last_part}"
+    masked_account = f"Счёт **{last_part}"
     return masked_account
 
-
-# Функция для вывода списка операций
 def show_recent_operations(data):
+    '''Функция для вывода списка операций и сортировка 5 послених успешных операций'''
     executed_operations = [op for op in data if op.get('state') == "EXECUTED"]
     sorted_operations = sorted(executed_operations, key=lambda x: x["date"], reverse=True)
     recent_operations = sorted_operations[:5]
@@ -46,17 +39,12 @@ def show_recent_operations(data):
         amount = operation["operationAmount"]["amount"]
         currency = operation["operationAmount"]["currency"]["name"]
 
-        # Получение полного названия типа карты (если есть)
-        card_type = operation["from"].split()[0] if "from" in operation else ""
-
         masked_from = mask_card(from_where) if from_where else ""
         masked_to = mask_account(to_where) if to_where else ""
 
         print(f"{date} {description}")
-        if card_type:  # Если есть информация о типе карты
-            print(f"{card_type} {masked_from} -> {masked_to}")
-        else:
-            print(f"Счет -> {masked_to}")
+        print(f"{masked_from} -> {masked_to}")
+        # print(f"Счет -> {masked_to}")
         print(f"{amount} {currency}")
         print()
 
