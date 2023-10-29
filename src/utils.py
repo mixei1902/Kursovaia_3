@@ -1,47 +1,65 @@
 import json
-import os
 from datetime import datetime
 
-# Определите путь к файлу внутри папки проекта
-file_path = os.path.join(os.path.dirname(__file__), 'operations.json')
+# Загрузка данных из JSON-файла
+with open('operations.json', 'r', encoding='utf-8') as file:
+    data = json.load(file)
 
-# Функция для загрузки данных из JSON-файла
-def load_data(file_path):
-    with open(file_path, 'r', encoding='utf-8') as file:
-        data = json.load(file)
-    return data
 
 # Функция для форматирования даты
 def format_date(date_str):
-    date = datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%S.%f")
+    date = datetime.fromisoformat(date_str)  # Преобразование формата даты
     return date.strftime('%d.%m.%Y')
 
-# Функция для маскировки номера карты и номера счета
-def mask_card_and_account(data):
-    if 'from' in data:
-        data['from'] = f'{data["from"][:6]} XX** **** {data["from"][-4:]}'
-    if 'to' in data:
-        data['to'] = f'Счет **{data["to"][-4:]}'
 
-# Основная функция для вывода списка операций
+# Функция для маскировки номера карты
+def mask_card(card_number):
+    # Разделим номер карты на группы: первые 6 символов, последние 4 символа
+    first_part = card_number[:6]
+    last_part = card_number[-4:]
+
+    # Замаскируем средние символы, если они есть
+    middle_part = ' '.join(['*' * 4] * ((len(card_number) - 10) // 4))
+
+    masked_card = f"{first_part} {middle_part} {last_part}"
+    return masked_card
+
+
+# Функция для маскировки номера счета
+def mask_account(account_number):
+    last_part = account_number[-4:]
+    masked_account = f"**{last_part}"
+    return masked_account
+
+
+# Функция для вывода списка операций
 def show_recent_operations(data):
-    # Фильтруем и сортируем данные по дате (последние операции сверху)
-    recent_operations = sorted(
-        [operation for operation in data if operation.get('state') == 'EXECUTED'],
-        key=lambda x: x.get('date'),
-        reverse=True
-    )[:5]
+    executed_operations = [op for op in data if op.get('state') == "EXECUTED"]
+    sorted_operations = sorted(executed_operations, key=lambda x: x["date"], reverse=True)
+    recent_operations = sorted_operations[:5]
 
     for operation in recent_operations:
-        mask_card_and_account(operation)  # Маскируем номер карты и счета
-        formatted_date = format_date(operation['date'])
-        amount = operation['operationAmount']['amount']
-        currency = operation['operationAmount']['currency']['name']
-        print(f"{formatted_date} {operation['description']}")
-        if 'from' in operation and 'to' in operation:
-            print(f"{operation['from']} -> {operation['to']}")
-        print(f"{amount} {currency}")
+        date = format_date(operation["date"])
+        description = operation["description"]
+        from_where = operation.get("from", "")
+        to_where = operation.get("to", "")
+        amount = operation["operationAmount"]["amount"]
+        currency = operation["operationAmount"]["currency"]["name"]
 
-if __name__ == '__main__':
-    data = load_data(file_path)
-    show_recent_operations(data)
+        # Получение полного названия типа карты (если есть)
+        card_type = operation["from"].split()[0] if "from" in operation else ""
+
+        masked_from = mask_card(from_where) if from_where else ""
+        masked_to = mask_account(to_where) if to_where else ""
+
+        print(f"{date} {description}")
+        if card_type:  # Если есть информация о типе карты
+            print(f"{card_type} {masked_from} -> {masked_to}")
+        else:
+            print(f"Счет -> {masked_to}")
+        print(f"{amount} {currency}")
+        print()
+
+
+# Вывод операций
+show_recent_operations(data)
